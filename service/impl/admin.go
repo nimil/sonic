@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	uuid2 "github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/go-sonic/sonic/cache"
@@ -99,7 +98,7 @@ func (a *adminServiceImpl) Auth(ctx context.Context, loginParam param.LoginParam
 		Content:   user.Nickname,
 		IPAddress: util.GetClientIP(ctx),
 	})
-	return a.buildAuthToken(user), nil
+	return a.buildAuthToken(user, ctx), nil
 }
 
 func (a *adminServiceImpl) ClearToken(ctx context.Context) error {
@@ -107,14 +106,14 @@ func (a *adminServiceImpl) ClearToken(ctx context.Context) error {
 	if !ok || user == nil {
 		return xerr.Forbidden.New("").WithStatus(xerr.StatusForbidden).WithMsg("未登录")
 	}
-	accessToken, _ := a.Cache.Get(cache.BuildAccessTokenKey(user.ID))
-	refreshToken, _ := a.Cache.Get(cache.BuildRefreshTokenKey(user.ID))
+	//accessToken, _ := a.Cache.Get(cache.BuildAccessTokenKey(user.ID))
+	//refreshToken, _ := a.Cache.Get(cache.BuildRefreshTokenKey(user.ID))
 
-	a.Cache.Delete(cache.BuildTokenAccessKey(accessToken.(string)))
-	a.Cache.Delete(cache.BuildTokenRefreshKey(refreshToken.(string)))
+	//a.Cache.Delete(cache.BuildTokenAccessKey(accessToken.(string)))
+	//a.Cache.Delete(cache.BuildTokenRefreshKey(refreshToken.(string)))
 
-	a.Cache.Delete(cache.BuildAccessTokenKey(user.ID))
-	a.Cache.Delete(cache.BuildRefreshTokenKey(user.ID))
+	//a.Cache.Delete(cache.BuildAccessTokenKey(user.ID))
+	//a.Cache.Delete(cache.BuildRefreshTokenKey(user.ID))
 	a.Event.Publish(ctx, &event.LogEvent{
 		LogKey:    user.Username,
 		LogType:   consts.LogTypeLoggedOut,
@@ -149,35 +148,51 @@ func (a *adminServiceImpl) SendResetPasswordCode(ctx context.Context, resetParam
 	return a.EmailService.SendTextEmail(ctx, resetParam.Email, "找回密码验证码", content)
 }
 
-func (a *adminServiceImpl) buildAuthToken(user *entity.User) *dto.AuthTokenDTO {
-	accessToken := uuid2.New().String()
-	refreshToken := uuid2.New().String()
-
+func (a *adminServiceImpl) buildAuthToken(user *entity.User, ctx context.Context) *dto.AuthTokenDTO {
 	authToken := &dto.AuthTokenDTO{}
+
+	secret, err := a.OptionService.GetOrByDefaultWithErr(ctx, property.JWTSecret, "")
+	if err != nil {
+		return nil
+	}
+	accessToken, err := util.GenerateToken(user.ID, secret.(string))
+
+	refreshToken, err := util.GenerateToken(user.ID, secret.(string))
+
+	if err != nil {
+		return nil
+	}
+
 	authToken.AccessToken = accessToken
 	authToken.ExpiredIn = consts.AccessTokenExpiredSeconds
 	authToken.RefreshToken = refreshToken
 
-	a.Cache.Set(cache.BuildTokenAccessKey(accessToken), user.ID, time.Second*consts.AccessTokenExpiredSeconds)
-	a.Cache.Set(cache.BuildTokenRefreshKey(refreshToken), user.ID, consts.RefreshTokenExpiredDays*24*3600*time.Second)
+	//a.Cache.Set(cache.BuildTokenAccessKey(accessToken), user.ID, time.Second*consts.AccessTokenExpiredSeconds)
+	//a.Cache.Set(cache.BuildTokenRefreshKey(refreshToken), user.ID, consts.RefreshTokenExpiredDays*24*3600*time.Second)
 
-	a.Cache.Set(cache.BuildAccessTokenKey(user.ID), accessToken, time.Second*consts.AccessTokenExpiredSeconds)
-	a.Cache.Set(cache.BuildRefreshTokenKey(user.ID), refreshToken, consts.RefreshTokenExpiredDays*24*3600*time.Second)
+	//a.Cache.Set(cache.BuildAccessTokenKey(user.ID), accessToken, time.Second*consts.AccessTokenExpiredSeconds)
+	//a.Cache.Set(cache.BuildRefreshTokenKey(user.ID), refreshToken, consts.RefreshTokenExpiredDays*24*3600*time.Second)
 
 	return authToken
 }
 
 func (a *adminServiceImpl) RefreshToken(ctx context.Context, refreshToken string) (*dto.AuthTokenDTO, error) {
-	userID, ok := a.Cache.Get(cache.BuildTokenRefreshKey(refreshToken))
-	if !ok {
+	//userID, ok := a.Cache.Get(cache.BuildTokenRefreshKey(refreshToken))
+	//if !ok {
+	//	return nil, xerr.WithMsg(nil, "登录状态已失效，请重新登录").WithStatus(xerr.StatusBadRequest)
+	//}
+
+	secret, err := a.OptionService.GetOrByDefaultWithErr(ctx, property.JWTSecret, "")
+	customClaims, err := util.ParseToken(refreshToken, secret.(string))
+	if err != nil {
 		return nil, xerr.WithMsg(nil, "登录状态已失效，请重新登录").WithStatus(xerr.StatusBadRequest)
 	}
 	userDAL := dal.GetQueryByCtx(ctx).User
-	user, err := userDAL.WithContext(ctx).Where(userDAL.ID.Eq(userID.(int32))).First()
+	user, err := userDAL.WithContext(ctx).Where(userDAL.ID.Eq(customClaims.UserID)).First()
 	if err != nil {
 		return nil, err
 	}
-	return a.buildAuthToken(user), nil
+	return a.buildAuthToken(user, ctx), nil
 }
 
 func (a *adminServiceImpl) GetEnvironments(ctx context.Context) *dto.EnvironmentDTO {

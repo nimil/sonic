@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/go-sonic/sonic/util"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -62,14 +63,20 @@ func (a *AuthMiddleware) GetWrapHandler() gin.HandlerFunc {
 			abortWithStatusJSON(ctx, http.StatusUnauthorized, "未登录，请登录后访问")
 			return
 		}
-		userID, ok := a.Cache.Get(cache.BuildTokenAccessKey(token))
 
-		if !ok || userID == nil {
+		secret, err := a.OptionService.GetOrByDefaultWithErr(ctx, property.JWTSecret, "")
+		if err != nil {
+			abortWithStatusJSON(ctx, http.StatusUnauthorized, "系统错误，请稍后再试")
+			return
+		}
+		customClaims, err := util.ParseToken(token, secret.(string))
+
+		if err != nil || customClaims == nil {
 			abortWithStatusJSON(ctx, http.StatusUnauthorized, "Token 已过期或不存在")
 			return
 		}
 
-		user, err := a.UserService.GetByID(ctx, userID.(int32))
+		user, err := a.UserService.GetByID(ctx, customClaims.UserID)
 		if xerr.GetType(err) == xerr.NoRecord {
 			_ = ctx.Error(err)
 			abortWithStatusJSON(ctx, http.StatusUnauthorized, "用户不存在")

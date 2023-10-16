@@ -8,21 +8,21 @@ import (
 	"github.com/go-sonic/sonic/util/xerr"
 )
 
-func BuildTokenAccessKey(accessToken string) string {
-	return consts.TokenAccessCachePrefix + accessToken
-}
-
-func BuildTokenRefreshKey(refreshToken string) string {
-	return consts.TokenRefreshCachePrefix + refreshToken
-}
-
-func BuildAccessTokenKey(userID int32) string {
-	return consts.TokenAccessCachePrefix + strconv.Itoa(int(userID))
-}
-
-func BuildRefreshTokenKey(userID int32) string {
-	return consts.TokenRefreshCachePrefix + strconv.Itoa(int(userID))
-}
+//func BuildTokenAccessKey(accessToken string) string {
+//	return consts.TokenAccessCachePrefix + accessToken
+//}
+//
+//func BuildTokenRefreshKey(refreshToken string) string {
+//	return consts.TokenRefreshCachePrefix + refreshToken
+//}
+//
+//func BuildAccessTokenKey(userID int32) string {
+//	return consts.TokenAccessCachePrefix + strconv.Itoa(int(userID))
+//}
+//
+//func BuildRefreshTokenKey(userID int32) string {
+//	return consts.TokenRefreshCachePrefix + strconv.Itoa(int(userID))
+//}
 
 func BuildCodeCacheKey(userID int32) string {
 	return consts.CodePrefix + strconv.Itoa(int(userID))
