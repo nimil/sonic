@@ -25,7 +25,7 @@ var (
 func NewGormDB(conf *config.Config, gormLogger logger.Interface) *gorm.DB {
 	var err error
 
-	//nolint:gocritic
+	//nolint:gocritic 如果是SQLite 初始化 优先SQLite
 	if conf.SQLite3 != nil && conf.SQLite3.Enable {
 		DB, err = initSQLite(conf, gormLogger)
 		if err != nil {

@@ -68,6 +68,7 @@ func NewConfig() *Config {
 	normalizeDir(&conf.Sonic.UploadDir, consts.SonicUploadDir)
 	normalizeDir(&conf.Sonic.ThemeDir, "resources/template/theme")
 	if conf.SQLite3 != nil && conf.SQLite3.Enable {
+		//这里指定了db的位置
 		normalizeDir(&conf.SQLite3.File, "sonic.db")
 	}
 	if !util.FileIsExisted(conf.Sonic.TemplateDir) {

@@ -62,32 +62,40 @@ func (i installServiceImpl) InstallBlog(ctx context.Context, installParam param.
 	}
 	var user *entity.User
 	err = dal.Transaction(ctx, func(txCtx context.Context) error {
+		//创建一个加密的key 应该是
 		if err := i.createJWTSecret(txCtx); err != nil {
 			return err
 		}
+		//默认设置，保存在数据库中
 		if err := i.createDefaultSetting(txCtx, installParam); err != nil {
 			return err
 		}
+		//创建用户
 		user, err = i.createUser(txCtx, installParam.User)
 		if err != nil {
 			return err
 		}
+		//创建一个默认分类
 		category, err := i.createDefaultCategory(txCtx)
 		if err != nil {
 			return err
 		}
+		//创建一个博客 默认的那一篇博客
 		post, err := i.createDefaultPost(txCtx, category)
 		if err != nil {
 			return err
 		}
+		//创建一个自定义的页面
 		_, err = i.createDefaultSheet(txCtx)
 		if err != nil {
 			return err
 		}
+		//创建一个默认评论
 		_, err = i.createDefaultComment(txCtx, post)
 		if err != nil {
 			return err
 		}
+		//创建页面
 		err = i.createDefaultMenu(txCtx)
 		return err
 	})

@@ -29,6 +29,10 @@ func NewAdminHandler(optionService service.OptionService, adminService service.A
 	}
 }
 
+/*
+*
+是否进入初始化流程
+*/
 func (a *AdminHandler) IsInstalled(ctx *gin.Context) (interface{}, error) {
 	return a.OptionService.GetOrByDefaultWithErr(ctx, property.IsInstalled, false)
 }
@@ -51,8 +55,14 @@ func (a *AdminHandler) AuthPreCheck(ctx *gin.Context) (interface{}, error) {
 	return &dto.LoginPreCheckDTO{NeedMFACode: a.TwoFactorMFAService.UseMFA(user.MfaType)}, nil
 }
 
+/*
+*
+
+	后台登录接口
+*/
 func (a *AdminHandler) Auth(ctx *gin.Context) (interface{}, error) {
 	var loginParam param.LoginParam
+	//验证参数
 	err := ctx.ShouldBindJSON(&loginParam)
 	if err != nil {
 		e := validator.ValidationErrors{}

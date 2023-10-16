@@ -53,6 +53,7 @@ func (a *adminServiceImpl) Authenticate(ctx context.Context, loginParam param.Lo
 	missMatchTip := "用户名或密码不正确"
 
 	var user *entity.User
+	//使用第三方库验证是否是email
 	err := util.Validate.Var(loginParam.Username, "email")
 
 	if err != nil {
@@ -61,6 +62,7 @@ func (a *adminServiceImpl) Authenticate(ctx context.Context, loginParam param.Lo
 		user, err = a.UserService.GetByEmail(ctx, loginParam.Username)
 	}
 
+	//用户名密码不匹配
 	if xerr.GetType(err) == xerr.NoRecord {
 		return nil, xerr.WithMsg(err, missMatchTip).WithStatus(xerr.StatusBadRequest)
 	}
@@ -158,6 +160,7 @@ func (a *adminServiceImpl) buildAuthToken(user *entity.User) *dto.AuthTokenDTO {
 	authToken.ExpiredIn = consts.AccessTokenExpiredSeconds
 	authToken.RefreshToken = refreshToken
 
+	//双重 设置下
 	a.Cache.Set(cache.BuildTokenAccessKey(accessToken), user.ID, time.Second*consts.AccessTokenExpiredSeconds)
 	a.Cache.Set(cache.BuildTokenRefreshKey(refreshToken), user.ID, consts.RefreshTokenExpiredDays*24*3600*time.Second)
 
@@ -168,15 +171,18 @@ func (a *adminServiceImpl) buildAuthToken(user *entity.User) *dto.AuthTokenDTO {
 }
 
 func (a *adminServiceImpl) RefreshToken(ctx context.Context, refreshToken string) (*dto.AuthTokenDTO, error) {
+	//根据refreshToken查询 新的token
 	userID, ok := a.Cache.Get(cache.BuildTokenRefreshKey(refreshToken))
 	if !ok {
 		return nil, xerr.WithMsg(nil, "登录状态已失效，请重新登录").WithStatus(xerr.StatusBadRequest)
 	}
+	//查询user信息
 	userDAL := dal.GetQueryByCtx(ctx).User
 	user, err := userDAL.WithContext(ctx).Where(userDAL.ID.Eq(userID.(int32))).First()
 	if err != nil {
 		return nil, err
 	}
+	//重新构建两个token
 	return a.buildAuthToken(user), nil
 }
 

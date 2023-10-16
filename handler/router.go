@@ -47,10 +47,15 @@ func (s *Server) RegisterRouters() {
 		{
 			adminAPIRouter := router.Group("/api/admin")
 			adminAPIRouter.Use(s.LogMiddleware.LoggerWithConfig(middleware.GinLoggerConfig{}), s.RecoveryMiddleware.RecoveryWithLogger(), s.InstallRedirectMiddleware.InstallRedirect())
+			//是否安装过 这个就是直接查询了一下数据库的is_install值
 			adminAPIRouter.GET("/is_installed", s.wrapHandler(s.AdminHandler.IsInstalled))
+			//登录时是否需要多重认证
 			adminAPIRouter.POST("/login/precheck", s.wrapHandler(s.AdminHandler.AuthPreCheck))
+			//登录接口
 			adminAPIRouter.POST("/login", s.wrapHandler(s.AdminHandler.Auth))
+			//刷新token
 			adminAPIRouter.POST("/refresh/:refreshToken", s.wrapHandler(s.AdminHandler.RefreshToken))
+			//安装接口
 			adminAPIRouter.POST("/installations", s.wrapHandler(s.InstallHandler.InstallBlog))
 			{
 				authRouter := adminAPIRouter.Group("")
